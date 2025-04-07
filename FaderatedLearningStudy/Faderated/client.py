@@ -21,6 +21,7 @@ def receive_model(sock):
     state_dict = pickle.loads(data)
     return state_dict
 
+
 # 모델 및 학습
 model = SimpleCNN()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,7 +44,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
     # 로컬 학습 (한 배치만)
     model.train()
     for epoch in range(5):
-        for batch_idx, data, target in enumerate(train_loader):
+        for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
