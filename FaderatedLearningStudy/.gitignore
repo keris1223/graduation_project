@@ -18,3 +18,6 @@ data/
 # 로그나 임시 파일
 *.log
 *.tmp
+
+__pycache__/
+*.pyc
