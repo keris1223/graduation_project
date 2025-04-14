@@ -39,7 +39,7 @@ loss_fn = nn.CrossEntropyLoss()
 for round_num in range(1, NUM_ROUNDS + 1):
     print(f"\nRound {round_num}/{NUM_ROUNDS} 시작")
 
-    # (선택) 서버에서 평균 모델 받아오기 (추후 확장 가능)
+    train_start = time.perf_counter()
 
     # 로컬 학습 (한 배치만)
     model.train()
@@ -54,6 +54,9 @@ for round_num in range(1, NUM_ROUNDS + 1):
             # if batch_ids >= 5:
             break  # 한 배치만 학습
 
+    train_end = time.perf_counter()
+    print(f"로컬 학습 시간: {train_end - train_start:.4f}s")
+
     # 모델 파라미터 직렬화
     serialized_params = pickle.dumps(model.state_dict())
 
@@ -67,15 +70,21 @@ for round_num in range(1, NUM_ROUNDS + 1):
         client_socket.sendall(serialized_params)
         client_socket.shutdown(socket.SHUT_WR)
 
+        end = time.perf_counter()
+        print(f"클라이언트->서버 전송 지연 시간: {end - start:.4f}초")
+
+        start = time.perf_counter()
+
         avg_state_dict = receive_model(client_socket)
+
         end = time.perf_counter()
 
-        print(f"전송, 수신 완료, 지연 시간: {end - start:.4f}초")
+        print(f"서버 -> 클라이언트 (평균모델) 시간: {end - start:.4f}초")
 
         model.load_state_dict(avg_state_dict)
         client_socket.close()
 
-        print("평균 모델 수신 완료")
+        print("평균 모델 적용 완료")
 
     except Exception as e:
         print(f"서버 연결 실패: {e}")
