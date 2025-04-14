@@ -63,18 +63,15 @@ for round_num in range(1, NUM_ROUNDS + 1):
         client_socket.connect((SERVER_IP, PORT))
 
         start = time.perf_counter()
+
         client_socket.sendall(serialized_params)
         client_socket.shutdown(socket.SHUT_WR)
+
+        avg_state_dict = receive_model(client_socket)
         end = time.perf_counter()
 
-        print(f"전송 완료, 지연 시간: {end - start:.4f}초")
+        print(f"전송, 수신 완료, 지연 시간: {end - start:.4f}초")
 
-        client_socket.close()
-
-
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((SERVER_IP, PORT))
-        avg_state_dict = receive_model(client_socket)
         model.load_state_dict(avg_state_dict)
         client_socket.close()
 
