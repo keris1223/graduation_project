@@ -7,14 +7,14 @@ import os
 
 HOST = '0.0.0.0'
 PORT = 5000
-NUM_CLIENTS = 16
-NUM_ROUNDS = 20
+NUM_CLIENTS = 8
+NUM_ROUNDS = 10
 print("Hello")
 def recv_model(conn):
     start = time.perf_counter()
     data = b""
     while True:
-        packet = conn.recv(65536)
+        packet = conn.recv(1048576)
         if not packet:
             break
         data += packet

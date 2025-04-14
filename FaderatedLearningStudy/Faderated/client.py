@@ -9,7 +9,7 @@ import time
 
 SERVER_IP = '14.47.39.5'  # 예: '192.168.0.101'
 PORT = 5000
-NUM_ROUNDS = 20
+NUM_ROUNDS = 10
 
 total_train_time = 0.0
 total_comm_time_to_server = 0.0
@@ -83,7 +83,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
         start = time.perf_counter()
         avg_state_dict = receive_model(client_socket)
         end = time.perf_counter()
-        print(f"서버 -> 클라이언트 (평균모델) 시간: {end - start:.4f}초")
+        print(f"서버 -> 클라이언트 (서버에서 모델을 모두 받아 합하여 클라로 전송) 시간: {end - start:.4f}초")
         total_comm_time_from_server += end - start
 
         model.load_state_dict(avg_state_dict)
