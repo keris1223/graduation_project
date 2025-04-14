@@ -1,7 +1,7 @@
 import socket
 import pickle
 import torch
-from model import SimpleCNN
+from model import BigCNN
 import time
 import os
 
@@ -23,7 +23,7 @@ def recv_model(conn):
     return pickle.loads(data)
 
 def average_models(client_models):
-    base_model = SimpleCNN()
+    base_model = BigCNN()
     avg_state_dict = base_model.state_dict()
 
     sum_start = time.perf_counter()

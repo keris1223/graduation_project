@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
-from model import SimpleCNN
+from model import BigCNN
 import time
 
 SERVER_IP = '14.47.39.5'  # 예: '192.168.0.101'
@@ -27,7 +27,7 @@ def receive_model(sock):
 
 
 # 모델 및 학습
-model = SimpleCNN()
+model = BigCNN()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Device: {device}')
 model.to(device)

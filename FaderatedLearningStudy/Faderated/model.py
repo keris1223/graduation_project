@@ -22,7 +22,7 @@ class BigCNN(nn.Module):
         self.conv2 = nn.Conv2d(64, 128, 3, padding=1) # 64→128
         self.conv3 = nn.Conv2d(128, 256, 3, padding=1) # 128→256
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(256 * 3 * 3, 1024)
+        self.fc1 = nn.Linear(256 * 7 * 7, 1024)
         self.fc2 = nn.Linear(1024, 10)
 
     def forward(self, x):
