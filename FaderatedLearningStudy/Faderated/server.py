@@ -48,6 +48,9 @@ server_socket.bind((HOST, PORT))
 server_socket.listen(NUM_CLIENTS)
 print(f"서버 시작됨: {HOST}:{PORT}")
 
+total_round_recv_time = 0.0
+total_round_send_time = 0.0
+
 # 라운드 반복
 for round_num in range(1, NUM_ROUNDS + 1):
     print(f"\nRound {round_num}/{NUM_ROUNDS} 시작")
@@ -60,16 +63,22 @@ for round_num in range(1, NUM_ROUNDS + 1):
         print(f"[{i+1}/{NUM_CLIENTS}] 클라이언트 연결 완료: {addr}")
         client_connections.append(conn)
 
-    learn_start = time.perf_counter()
+    recv_start = time.perf_counter()
 
     for conn in client_connections:
         model_params = recv_model(conn)
         client_models.append(model_params)
 
-    averaged_model = average_models(client_models)
+    recv_end = time.perf_counter()
+    recv_time = recv_end - recv_start
+    print(f"Round {round_num} 클라이언트로부터 수신 시간: {recv_time:.4f}초")
+    total_round_recv_time += recv_time
 
+    learn_start = time.perf_counter()
+    averaged_model = average_models(client_models)
     learn_end = time.perf_counter()
-    print(f"전체 학습 시간 (클라 학습 + 수신 + 평균): {learn_end - learn_start:.4f}초")
+    print(f"Round {round_num} 수신받은 파라미터의 평균 계산 시간: {learn_end - learn_start:.4f}초")
+
 
     model_dir = "models"
     os.makedirs(model_dir, exist_ok=True)
@@ -77,7 +86,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
     torch.save(averaged_model.state_dict(), model_path)
     print(f"Round {round_num} 평균 모델 저장: {model_path}")
 
-    print("평균 모델 클라이언트에 전송 중...")
+    print("평균 모델 클라이언트에 전송 시작")
     total_send_start = time.perf_counter()
     for i, conn in enumerate(client_connections):
         send_start = time.perf_counter()
@@ -89,7 +98,12 @@ for round_num in range(1, NUM_ROUNDS + 1):
         print(f"클라이언트 {i+1} 전송 완료({elapsed:.4f}s)")
 
     total_send_end = time.perf_counter()
-    print(f"평균 모델 총 전송 시간: {total_send_end-total_send_start:.4f}s")
+    total_send = total_send_end - total_send_start
+    print(f"Round {round_num} 전송 시간: {total_send:.4f}s")
+
+    total_round_send_time += total_send
 
 print("\n연합 학습 완료")
+print(f"전체 수신 시간 총합: {total_round_recv_time:.4f}초")
+print(f"전체 전송 시간 총합: {total_round_send_time:.4f}초")
 server_socket.close()
