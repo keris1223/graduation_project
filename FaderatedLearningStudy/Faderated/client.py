@@ -18,7 +18,7 @@ total_comm_time_from_server = 0.0
 def receive_model(sock):
     data = b""
     while True:
-        packet = sock.recv(65536)
+        packet = sock.recv(1048576)
         if not packet:
             break
         data += packet
@@ -48,7 +48,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
 
     # 로컬 학습 (한 배치만)
     model.train()
-    for epoch in range(5):
+    for epoch in range(3):
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
@@ -57,7 +57,6 @@ for round_num in range(1, NUM_ROUNDS + 1):
             loss.backward()
             optimizer.step()
             # if batch_ids >= 5:
-            break  # 한 배치만 학습
 
     train_end = time.perf_counter()
     print(f"로컬 학습 시간: {train_end - train_start:.4f}s")
