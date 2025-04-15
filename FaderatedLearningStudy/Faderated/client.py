@@ -35,7 +35,7 @@ model.to(device)
 transform = transforms.ToTensor()
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST('./data', train=True, download=True, transform=transform),
-    batch_size=32, shuffle=True
+    batch_size=8, shuffle=True
 )
 
 optimizer = optim.SGD(model.parameters(), lr=0.01)
@@ -49,6 +49,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
     # 로컬 학습 (한 배치만)
     model.train()
     for epoch in range(3):
+        print(f"Epoch {epoch+1}/3 시작")
         for batch_idx, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
@@ -56,6 +57,9 @@ for round_num in range(1, NUM_ROUNDS + 1):
             loss = loss_fn(output, target)
             loss.backward()
             optimizer.step()
+
+            if batch_idx % 100 == 0:
+                print(f"Batch {batch_idx}/{len(train_loader)} - Loss: {loss.item():.4f}")
             # if batch_ids >= 5:
 
     train_end = time.perf_counter()
