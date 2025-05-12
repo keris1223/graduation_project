@@ -1,5 +1,7 @@
 import struct
 import pickle
+import gzip
+import io
 
 def send_pickle(sock, obj):
     data = pickle.dumps(obj)
@@ -21,5 +23,6 @@ def recv_pickle(sock):
         if not packet:
             raise ConnectionError("Connection closed during data recv")
         data += packet
-        print(f"[DEBUG] Received {len(data)}/{total_len} bytes")  # ★ 진척도 출력
+        print(f"[DEBUG] Received {len(data)}/{total_len} bytes")
     return pickle.loads(data)
+
