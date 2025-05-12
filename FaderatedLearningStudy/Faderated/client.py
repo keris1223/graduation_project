@@ -7,7 +7,7 @@ from torchvision import datasets, transforms
 from model import BigCNN
 import time
 
-SERVER_IP = '14.47.39.5'  # 예: '192.168.0.101'
+SERVER_IP = '118.34.145.83'  # 예: '192.168.0.101'
 PORT = 5000
 NUM_ROUNDS = 10
 
@@ -60,6 +60,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
 
             if batch_idx % 100 == 0:
                 print(f"Batch {batch_idx}/{len(train_loader)} - Loss: {loss.item():.4f}")
+            break
             # if batch_ids >= 5:
 
     train_end = time.perf_counter()

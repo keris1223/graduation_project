@@ -4,13 +4,14 @@ import torch
 from model import BigCNN
 import time
 import os
+import threading
 
 HOST = '0.0.0.0'
 PORT = 5000
 NUM_CLIENTS = 8
 NUM_ROUNDS = 10
 print("Hello")
-def recv_model(conn):
+def recv_model_thread(conn, results, index):
     start = time.perf_counter()
     data = b""
     while True:
@@ -20,7 +21,14 @@ def recv_model(conn):
         data += packet
     end = time.perf_counter()
     print(f"모델 수신 완료, 지연 시간: {end - start:.4f}초")
-    return pickle.loads(data)
+    model_state = pickle.loads(data)
+    results[index] = model_state
+
+def send_model_thread(conn,model):
+    serialized = pickle.dumps(model.state_dict())
+    conn.sendall(serialized)
+    conn.shutdown(socket.SHUT_WR)
+    conn.close()
 
 def average_models(client_models):
     base_model = BigCNN()
@@ -36,11 +44,6 @@ def average_models(client_models):
     base_model.load_state_dict(avg_state_dict)
     return base_model
 
-def send_model(conn, model):
-    serialized = pickle.dumps(model.state_dict())
-    conn.sendall(serialized)
-    conn.shutdown(socket.SHUT_WR)
-
 # 소켓 열기 (한 번만)
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -55,7 +58,6 @@ total_round_send_time = 0.0
 for round_num in range(1, NUM_ROUNDS + 1):
     print(f"\nRound {round_num}/{NUM_ROUNDS} 시작")
 
-    client_models = []
     client_connections = []
 
     for i in range(NUM_CLIENTS):
@@ -63,11 +65,17 @@ for round_num in range(1, NUM_ROUNDS + 1):
         print(f"[{i+1}/{NUM_CLIENTS}] 클라이언트 연결 완료: {addr}")
         client_connections.append(conn)
 
+    recv_threads = []
+    client_models = [None] * NUM_CLIENTS
     recv_start = time.perf_counter()
 
-    for conn in client_connections:
-        model_params = recv_model(conn)
-        client_models.append(model_params)
+    for idx, conn in enumerate(client_connections):
+        t = threading.Thread(target=recv_model_thread, args=(conn, client_models, idx))
+        t.start()
+        recv_threads.append(t)
+
+    for t in recv_threads:
+        t.join()
 
     recv_end = time.perf_counter()
     recv_time = recv_end - recv_start
@@ -88,14 +96,14 @@ for round_num in range(1, NUM_ROUNDS + 1):
 
     print("평균 모델 클라이언트에 전송 시작")
     total_send_start = time.perf_counter()
-    for i, conn in enumerate(client_connections):
-        send_start = time.perf_counter()
+    send_threads = []
 
-        send_model(conn, averaged_model)
-        conn.close()
-        send_end = time.perf_counter()
-        elapsed = send_end - send_start
-        print(f"클라이언트 {i+1} 전송 완료({elapsed:.4f}s)")
+    for conn in client_connections:
+        t = threading.Thread(target=send_model_thread, args=(conn, averaged_model))
+        t.start()
+        send_threads.append(t)
+    for t in send_threads:
+        t.join()
 
     total_send_end = time.perf_counter()
     total_send = total_send_end - total_send_start
