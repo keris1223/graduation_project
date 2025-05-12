@@ -89,7 +89,7 @@ def handle_client(conn, client_id):
         print("\n[Server] 클라이언트별 누적 전송 시간:")
         for i in range(NUM_CLIENTS):
             print(f"누적 전송 시간 Client {i}: {send_times[i]:.4f}s")
-
+        print(f"\n[server] 누적 평균 계산 시간 :{total_avg_time:.4f}s")
 
 # 소켓 수신
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
