@@ -18,9 +18,10 @@ model_ready_barrier = threading.Barrier(NUM_CLIENTS)
 send_ready_barrier = threading.Barrier(NUM_CLIENTS)
 averaged_model = None
 
-total_recv_time = 0.0
+recv_times = [0.0] * NUM_CLIENTS
+send_times = [0.0] * NUM_CLIENTS
 total_avg_time = 0.0
-total_send_time = 0.0
+
 def average_models(models):
     base_model = BigCNN()
     avg_state_dict = base_model.state_dict()
@@ -30,7 +31,7 @@ def average_models(models):
     return base_model
 
 def handle_client(conn, client_id):
-    global averaged_model, total_recv_time, total_avg_time, total_send_time
+    global averaged_model, recv_time, total_avg_time, send_time
 
     for round_num in range(1, NUM_ROUNDS + 1):
         print(f"[Client {client_id}] Round {round_num}: Receiving model...")
@@ -43,10 +44,9 @@ def handle_client(conn, client_id):
                 break
 
             client_models[client_id] = model_state
-            elapsed = recv_end - recv_start
-            print(f"[Client {client_id}] 모델 수신 완료: {elapsed:.4f}s")
-            if client_id == 0:
-                total_recv_time += elapsed
+            recv_elapsed = recv_end - recv_start
+            print(f"[Client {client_id}] 모델 수신 완료: {recv_elapsed:.4f}s")
+            recv_time[client_id] += recv_elapsed
 
         except Exception as e:
             print(f"[Client {client_id}] 수신 중 오류: {e}")
@@ -71,10 +71,9 @@ def handle_client(conn, client_id):
             send_start = time.perf_counter()
             send_pickle(conn, averaged_model.state_dict())
             send_end = time.perf_counter()
-            send_time = send_end - send_start
-            print(f"[Client {client_id}] Round {round_num}: 평균 모델 전송 완료({send_time:.4f}s)")
-            if client_id == 0:
-                total_send_time += send_time
+            send_elapsed = send_end - send_start
+            print(f"[Client {client_id}] Round {round_num}: 평균 모델 전송 완료({send_elapsed:.4f}s)")
+            send_time[client_id] = send_elapsed
         except Exception as e:
             print(f"[Client {client_id}] 전송 중 오류: {e}")
             break
@@ -82,11 +81,15 @@ def handle_client(conn, client_id):
     conn.close()
     print(f"[Client {client_id}] 연결 종료됨")
 
-    if client_id == 0:
-        print("\n[Server] 연합 학습 완료")
-        print(f"총 수신 시간: {total_recv_time:.4f}초")
-        print(f"총 평균 계산 시간: {total_avg_time:.4f}초")
-        print(f"총 전송 시간: {total_send_time:.4f}초")
+    if client_id == 7:
+        print("\n[Server] 클라이언트별 누적 수신 시간:")
+    for i in range(NUM_CLIENTS):
+        print(f" - Client {i}: {recv_times[i]:.4f}s")
+
+    print("\n[Server] 클라이언트별 누적 전송 시간:")
+    for i in range(NUM_CLIENTS):
+        print(f" - Client {i}: {send_times[i]:.4f}s")
+
 
 # 소켓 수신
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
