@@ -41,6 +41,9 @@ train_loader = torch.utils.data.DataLoader(
 optimizer = optim.SGD(model.parameters(), lr=0.01)
 loss_fn = nn.CrossEntropyLoss()
 
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect((SERVER_IP, PORT))
+
 for round_num in range(1, NUM_ROUNDS + 1):
     print(f"\nRound {round_num}/{NUM_ROUNDS} 시작")
 
@@ -72,8 +75,6 @@ for round_num in range(1, NUM_ROUNDS + 1):
 
     # 서버에 전송
     try:
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((SERVER_IP, PORT))
 
         start = time.perf_counter()
 
@@ -91,13 +92,14 @@ for round_num in range(1, NUM_ROUNDS + 1):
         total_comm_time_from_server += end - start
 
         model.load_state_dict(avg_state_dict)
-        client_socket.close()
+
 
         print("평균 모델 적용 완료")
 
     except Exception as e:
         print(f"서버 연결 실패: {e}")
         break
+client_socket.close()
 
 print("\n 전체 라운드 완료")
 print(f"총 학습 시간: {total_train_time:.4f}s")
