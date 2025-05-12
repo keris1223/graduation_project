@@ -83,12 +83,12 @@ def handle_client(conn, client_id):
 
     if client_id == 7:
         print("\n[Server] 클라이언트별 누적 수신 시간:")
-    for i in range(NUM_CLIENTS):
-        print(f" - Client {i}: {recv_times[i]:.4f}s")
+        for i in range(NUM_CLIENTS):
+            print(f"누적 수신 시간 Client {i}: {recv_times[i]:.4f}s")
 
-    print("\n[Server] 클라이언트별 누적 전송 시간:")
-    for i in range(NUM_CLIENTS):
-        print(f" - Client {i}: {send_times[i]:.4f}s")
+        print("\n[Server] 클라이언트별 누적 전송 시간:")
+        for i in range(NUM_CLIENTS):
+            print(f"누적 전송 시간 Client {i}: {send_times[i]:.4f}s")
 
 
 # 소켓 수신
