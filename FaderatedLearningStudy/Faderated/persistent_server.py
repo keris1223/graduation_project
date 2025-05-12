@@ -5,6 +5,7 @@ from model import BigCNN
 import threading
 import os
 import time
+from utils import recv_pickle, send_pickle
 
 HOST = '0.0.0.0'
 PORT = 5000
@@ -16,13 +17,12 @@ client_models = [None] * NUM_CLIENTS
 model_ready_barrier = threading.Barrier(NUM_CLIENTS)
 send_ready_barrier = threading.Barrier(NUM_CLIENTS)
 averaged_model = None
-lock = threading.Lock()
 
 def average_models(models):
     base_model = BigCNN()
     avg_state_dict = base_model.state_dict()
     for key in avg_state_dict:
-        avg_state_dict[key] = sum(model[key] for model in models) / len(models)
+        avg_state_dict[key] = sum(m[key] for m in models) / len(models)
     base_model.load_state_dict(avg_state_dict)
     return base_model
 
@@ -31,49 +31,45 @@ def handle_client(conn, client_id):
 
     for round_num in range(1, NUM_ROUNDS + 1):
         print(f"[Client {client_id}] Round {round_num}: Receiving model...")
-        data = b""
-        while True:
-            packet = conn.recv(1048576)
-            if not packet:
+        try:
+            model_state = recv_pickle(conn)
+            if model_state is None:
+                print(f"[Client {client_id}] 수신 실패 또는 연결 종료")
                 break
-            data += packet
+            client_models[client_id] = model_state
+        except Exception as e:
+            print(f"[Client {client_id}] 수신 중 오류: {e}")
+            break
 
-        model_state = pickle.loads(data)
-        client_models[client_id] = model_state
-        print(f"[Client {client_id}] Model received.")
-
-        model_ready_barrier.wait()  # 모든 클라이언트 수신 대기
+        print(f"[Client {client_id}] Round {round_num}: 모델 수신 완료, barrier 진입 전")
+        model_ready_barrier.wait()
+        print(f"[Client {client_id}] Round {round_num}: barrier 통과")
 
         if client_id == 0:
-            print(f"[Server] Averaging models for Round {round_num}...")
-            start = time.perf_counter()
+            print(f"[Server] Round {round_num} 평균 계산 중...")
             averaged_model = average_models(client_models)
-            end = time.perf_counter()
-            print(f"[Server] Model averaging completed in {end - start:.4f}s")
+            torch.save(averaged_model.state_dict(), f"models/round_{round_num:02d}.pt")
+            print(f"[Server] Round {round_num} 모델 저장 완료")
 
-            # 저장
-            model_dir = "models"
-            os.makedirs(model_dir, exist_ok=True)
-            torch.save(averaged_model.state_dict(), f"{model_dir}/round_{round_num:02d}.pt")
-            print(f"[Server] Saved averaged model: round_{round_num:02d}.pt")
+        send_ready_barrier.wait()
 
-        send_ready_barrier.wait()  # 모델 계산 완료 대기
-
-        serialized = pickle.dumps(averaged_model.state_dict())
-        conn.sendall(serialized)
-        print(f"[Client {client_id}] Averaged model sent.")
+        try:
+            send_pickle(conn, averaged_model.state_dict())
+            print(f"[Client {client_id}] Round {round_num}: 평균 모델 전송 완료")
+        except Exception as e:
+            print(f"[Client {client_id}] 전송 중 오류: {e}")
+            break
 
     conn.close()
-    print(f"[Client {client_id}] Disconnected.")
+    print(f"[Client {client_id}] 연결 종료됨")
 
-# 소켓 설정
+# 소켓 수신
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server_socket.bind((HOST, PORT))
 server_socket.listen(NUM_CLIENTS)
 print(f"[Server] Listening on {HOST}:{PORT}")
 
-# 클라이언트 연결 수락 및 스레드 시작
 for i in range(NUM_CLIENTS):
     conn, addr = server_socket.accept()
     print(f"[Server] Client {i} connected from {addr}")
