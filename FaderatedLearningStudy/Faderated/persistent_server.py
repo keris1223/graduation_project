@@ -31,7 +31,7 @@ def average_models(models):
     return base_model
 
 def handle_client(conn, client_id):
-    global averaged_model, recv_times, total_avg_time, send_time
+    global averaged_model, recv_times, total_avg_time, send_times
 
     for round_num in range(1, NUM_ROUNDS + 1):
         print(f"[Client {client_id}] Round {round_num}: Receiving model...")
@@ -73,7 +73,7 @@ def handle_client(conn, client_id):
             send_end = time.perf_counter()
             send_elapsed = send_end - send_start
             print(f"[Client {client_id}] Round {round_num}: 평균 모델 전송 완료({send_elapsed:.4f}s)")
-            send_time[client_id] = send_elapsed
+            send_times[client_id] = send_elapsed
         except Exception as e:
             print(f"[Client {client_id}] 전송 중 오류: {e}")
             break
