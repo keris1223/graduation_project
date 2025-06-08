@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import socket
 import pickle
 import torch
@@ -6,6 +9,7 @@ import os
 from model import BigCNN
 from utils import send_pickle, recv_pickle
 import time
+import numpy as np
 
 HOST = '0.0.0.0'
 PORT = 5000
@@ -21,7 +25,7 @@ client_epochs = [3] * NUM_CLIENTS  # 초기값 3
 model_ready_barrier = threading.Barrier(NUM_CLIENTS)
 send_ready_barrier = threading.Barrier(NUM_CLIENTS)
 averaged_model = None
-
+comm_times = [0.0] * NUM_CLIENTS
 
 def average_models(models):
     base_model = BigCNN()
@@ -31,14 +35,23 @@ def average_models(models):
     base_model.load_state_dict(avg_state)
     return base_model
 
+def decide_epochs_from_comm_times(comm_times, min_epoch=1, max_epoch=5):
+    """
+    comm_times: 클라이언트별 통신 시간 리스트
+    """
+    min_time = min(comm_times)
+    max_time = max(comm_times)
+    
+    if max_time - min_time < 1e-6:
+        return [min_epoch] * len(comm_times)  # 통신 시간 거의 동일 시 고정
 
-def decide_epoch_from_loss(loss):
-    if loss < 0.08:
-        return 1
-    elif loss < 0.4:
-        return 2
-    else:
-        return 3
+    epochs = []
+    for t in comm_times:
+        # 통신 시간이 길수록 epoch 작게
+        norm = 1 - (t - min_time) / (max_time - min_time)
+        epoch = int(round(min_epoch + norm * (max_epoch - min_epoch)))
+        epochs.append(epoch)
+    return epochs
 
 
 def handle_client(conn, client_id):
@@ -47,14 +60,17 @@ def handle_client(conn, client_id):
     for round_num in range(1, NUM_ROUNDS + 1):
         print(f"[Client {client_id}] Round {round_num} 수신 대기 중...")
         try:
+            recv_start = time.perf_counter()
             data = recv_pickle(conn)
+            recv_end = time.perf_counter()
+            comm_times[client_id] = recv_end - recv_start
+
             client_models[client_id] = data['model']
             client_losses[client_id] = data['metric']['loss']
-            print(f"[Client {client_id}] 수신 완료 - Loss: {client_losses[client_id]:.4f}")
+            print(f"[Client {client_id}] 수신 완료 - Loss: {client_losses[client_id]:.4f}, CommTime: {comm_times[client_id]:.4f}s")
         except Exception as e:
             print(f"[Client {client_id}] 수신 실패: {e}")
             break
-
         model_ready_barrier.wait()
 
         # 서버 쓰레드 하나만 평균 계산
@@ -65,10 +81,11 @@ def handle_client(conn, client_id):
             print(f"[Server] 평균 모델 저장 완료")
 
             # 다음 라운드 학습 에폭 계산
+            epochs = decide_epochs_from_comm_times(comm_times)
             for i in range(NUM_CLIENTS):
-                loss = client_losses[i]
-                client_epochs[i] = decide_epoch_from_loss(loss)
-                print(f"[Server] Client {i} → Epoch 설정: {client_epochs[i]} (Loss: {loss:.4f})")
+                
+                client_epochs[i] = epochs[i]
+                print(f"[Server] Client {i} → Epoch 설정: {client_epochs[i]} (Loss: {client_losses[i]:.4f})")
 
         send_ready_barrier.wait()
 

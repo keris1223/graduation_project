@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import socket
 import pickle
 import torch
@@ -8,7 +11,7 @@ from model import BigCNN
 import time
 from utils import send_pickle, recv_pickle
 
-SERVER_IP = '118.34.145.83'
+SERVER_IP = '112.168.69.70'
 PORT = 5000
 NUM_ROUNDS = 10
 
@@ -73,6 +76,7 @@ for round_num in range(1, NUM_ROUNDS + 1):
             optimizer.step()
             cumulative_loss += loss.item()
             total_batches += 1
+            break
 
               # 한 배치만 학습
     train_end = time.perf_counter()
