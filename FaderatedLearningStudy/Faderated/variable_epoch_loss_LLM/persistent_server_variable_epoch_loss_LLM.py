@@ -13,7 +13,6 @@ import time
 import numpy as np
 from llm_model import load_model
 from peft import set_peft_model_state_dict, get_peft_model_state_dict
-import json
 
 HOST = '0.0.0.0'
 PORT = 5000
@@ -34,28 +33,29 @@ comm_times = [0.0] * NUM_CLIENTS
 
 averaged_model = load_model()
 
+
+
+
+
 def average_models(models):
     avg_state = {}
     for key in models[0].keys():
         avg_state[key] = sum(m[key] for m in models) / len(models)
     return avg_state
 
-def decide_epochs_from_comm_times(comm_times, min_epoch=1, max_epoch=5):
-    """
-    comm_times: 클라이언트별 통신 시간 리스트
-    """
-    min_time = min(comm_times)
-    max_time = max(comm_times)
-    
-    if max_time - min_time < 1e-6:
-        return [min_epoch] * len(comm_times)  # 통신 시간 거의 동일 시 고정
+
+def decide_epochs_from_losses(losses, min_epoch=1, max_epoch=5):
+    median = np.median(losses)
+    std = np.std(losses) + 1e-6
 
     epochs = []
-    for t in comm_times:
-        # 통신 시간이 길수록 epoch 작게
-        norm = 1 - (t - min_time) / (max_time - min_time)
+    for loss in losses:
+        z = (loss - median) / std
+        z = np.clip(z, -2, 2)
+        norm = 0.5 + 0.25 * z
         epoch = int(round(min_epoch + norm * (max_epoch - min_epoch)))
         epochs.append(epoch)
+
     return epochs
 
 
@@ -91,7 +91,7 @@ def handle_client(conn, client_id):
             print(f"[Server] 평균 모델 저장 완료")
 
             # 다음 라운드 학습 에폭 계산
-            epochs = decide_epochs_from_comm_times(comm_times)
+            epochs = decide_epochs_from_losses(client_losses)
             for i in range(NUM_CLIENTS):
                 
                 client_epochs[i] = epochs[i]

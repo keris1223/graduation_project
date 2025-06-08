@@ -39,7 +39,7 @@ def load_alpaca_prompts(json_path, tokenizer, max_token_length=150):
 
         tokenized = tokenizer(full_prompt, return_tensors="pt", truncation=False)
         length = tokenized["input_ids"].shape[1]
-        if length < max_token_length:
+        if length <= max_token_length:
             prompts.append(full_prompt)
     return prompts
 
