@@ -15,7 +15,7 @@ from peft import get_peft_model_state_dict
 import json
 import random
 
-SERVER_IP = '112.168.69.70'
+SERVER_IP = '210.103.85.18'
 PORT = 5000
 NUM_ROUNDS = 3
 
