@@ -30,11 +30,13 @@ send_ready_barrier = threading.Barrier(NUM_CLIENTS)
 averaged_model = None
 comm_times = [0.0] * NUM_CLIENTS
 
-
 averaged_model = load_model()
 
+client_log = open("client_log.csv", "w")
+client_log.write("round,client_id,loss,comm_time,epoch\n")
 
-
+round_log = open("round_time.csv", "w")
+round_log.write("round,total_time_sec\n")
 
 
 def average_models(models):
@@ -98,7 +100,11 @@ def handle_client(conn, client_id):
                 print(f"[Server] Client {i} → Epoch 설정: {client_epochs[i]} (Loss: {client_losses[i]:.4f})")
 
         send_ready_barrier.wait()
-
+        loss = client_losses[client_id]
+        comm_time = comm_times[client_id]
+        epoch = client_epochs[client_id]
+        client_log.write(f"{round_num},{client_id},{loss:.4f},{comm_time:.4f},{epoch}\n")
+        client_log.flush()
         # 평균 모델 + 다음 에폭 수 전송
         try:
             if round_num < NUM_ROUNDS:
@@ -137,8 +143,18 @@ print(f"[Server] Listening on {HOST}:{PORT}")
 
 os.makedirs("models", exist_ok=True)
 
+threads= []
 for i in range(NUM_CLIENTS):
     conn, addr = server_socket.accept()
     print(f"[Server] Client {i} connected from {addr}")
     client_connections.append(conn)
-    threading.Thread(target=handle_client, args=(conn, i)).start()
+    t = threading.Thread(target=handle_client, args=(conn, i))
+    t.start()
+    threads.append(t)
+
+for t in threads:
+    t.join()
+
+client_log.close()
+round_log.close()
+print("[Server] 로그 파일 닫힘")
