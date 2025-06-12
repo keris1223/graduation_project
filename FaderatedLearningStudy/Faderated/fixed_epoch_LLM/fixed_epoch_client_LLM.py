@@ -8,10 +8,10 @@ from utils import send_pickle, recv_pickle
 from llm_model import load_model
 from peft import get_peft_model_state_dict
 
-SERVER_IP = '서버 IP 주소'
+SERVER_IP = '118.34.145.27'
 PORT = 5000
-NUM_ROUNDS = 3
-FIXED_EPOCH = 3
+NUM_ROUNDS = 50
+# FIXED_EPOCH = 3
 
 tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
 model = load_model().to("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,10 +34,12 @@ for round_num in range(1, NUM_ROUNDS + 1):
     if round_num > 1:
         payload = recv_pickle(client_socket)
         model.load_state_dict(payload['model'], strict=False)
+        local_epochs = payload.get('local_epochs',3)
         print(f"[Round {round_num}] 서버에서 모델 수신 완료")
-
+    else:
+        local_epochs = 3
     cumulative_loss = 0.0
-    for epoch in range(FIXED_EPOCH):
+    for epoch in range(local_epochs):
         text = random.choice(prompts)
         inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(model.device)
         labels = inputs["input_ids"].clone()
@@ -47,9 +49,9 @@ for round_num in range(1, NUM_ROUNDS + 1):
         optimizer.step()
         optimizer.zero_grad()
         cumulative_loss += loss.item()
-        print(f"Epoch {epoch+1}/{FIXED_EPOCH} - Loss: {loss.item():.4f}")
+        print(f"Epoch {epoch+1}/{local_epochs} - Loss: {loss.item():.4f}")
 
-    avg_loss = cumulative_loss / FIXED_EPOCH
+    avg_loss = cumulative_loss / local_epochs
     send_pickle(client_socket, {
         'model': get_peft_model_state_dict(model),
         'metric': {'loss': avg_loss, 'round': round_num}

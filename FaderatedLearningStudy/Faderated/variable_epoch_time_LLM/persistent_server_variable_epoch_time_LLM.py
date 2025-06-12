@@ -15,10 +15,10 @@ from llm_model import load_model
 from peft import set_peft_model_state_dict, get_peft_model_state_dict
 import json
 
-HOST = '0.0.0.0'
+HOST = '118.34.145.27'
 PORT = 5000
 NUM_CLIENTS = 2
-NUM_ROUNDS = 3
+NUM_ROUNDS = 50
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 

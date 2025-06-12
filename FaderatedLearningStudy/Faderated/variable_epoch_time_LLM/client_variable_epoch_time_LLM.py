@@ -15,9 +15,9 @@ from peft import get_peft_model_state_dict
 import json
 import random
 
-SERVER_IP = '210.103.85.18'
+SERVER_IP = '118.34.145.27'
 PORT = 5000
-NUM_ROUNDS = 3
+NUM_ROUNDS = 50
 
 total_train_time = 0.0
 total_comm_time_to_server = 0.0
