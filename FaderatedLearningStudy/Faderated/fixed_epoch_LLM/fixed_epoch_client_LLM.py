@@ -10,7 +10,7 @@ from peft import get_peft_model_state_dict
 
 SERVER_IP = '118.34.145.27'
 PORT = 5000
-NUM_ROUNDS = 100
+NUM_ROUNDS = 50
 BATCH_SIZE = 4
 # FIXED_EPOCH = 3
 

@@ -17,8 +17,8 @@ import json
 
 HOST = '118.34.145.27'
 PORT = 5000
-NUM_CLIENTS = 2
-NUM_ROUNDS = 100
+NUM_CLIENTS = 4
+NUM_ROUNDS = 50
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 
@@ -57,17 +57,18 @@ def decide_epochs_from_comm_times(comm_times, min_epoch=3, max_epoch=7):
 
     epochs = []
     for t in comm_times:
-        # 통신 시간이 길수록 epoch 작게
-        norm = 1 - (t - min_time) / (max_time - min_time)
-        epoch = int(round(min_epoch + norm * (max_epoch - min_epoch)))
-        epochs.append(epoch)
+        ratio = (t - min_time) / (max_time - min_time)
+        norm = 1 - ratio  # 통신 빠를수록 epoch ↑
+        epoch = min_epoch + norm * (max_epoch - min_epoch)
+        epochs.append(int(round(epoch)))
     return epochs
-
 
 def handle_client(conn, client_id):
     global averaged_model
 
     for round_num in range(1, NUM_ROUNDS + 1):
+        if client_id == 0:
+            round_start = time.perf_counter()
         print(f"[Client {client_id}] Round {round_num} 수신 대기 중...")
         try:
             recv_start = time.perf_counter()
@@ -101,7 +102,10 @@ def handle_client(conn, client_id):
                 
                 client_epochs[i] = epochs[i]
                 print(f"[Server] Client {i} → Epoch 설정: {client_epochs[i]} (Loss: {client_losses[i]:.4f})")
-
+            round_end = time.perf_counter()
+            round_duration = round_end - round_start
+            round_log.write(f"{round_num},{round_duration:.4f}\n")
+            round_log.flush()
         send_ready_barrier.wait()
         loss = client_losses[client_id]
         comm_time = comm_times[client_id]

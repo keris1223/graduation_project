@@ -17,7 +17,7 @@ import random
 
 SERVER_IP = '118.34.145.27'
 PORT = 5000
-NUM_ROUNDS = 100
+NUM_ROUNDS = 50
 BATCH_SIZE = 4
 
 total_train_time = 0.0

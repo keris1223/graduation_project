@@ -16,8 +16,8 @@ from peft import set_peft_model_state_dict, get_peft_model_state_dict
 
 HOST = '0.0.0.0'
 PORT = 5000
-NUM_CLIENTS = 2
-NUM_ROUNDS = 100
+NUM_CLIENTS = 4
+NUM_ROUNDS = 50
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 
@@ -65,6 +65,8 @@ def handle_client(conn, client_id):
     global averaged_model
 
     for round_num in range(1, NUM_ROUNDS + 1):
+        if client_id == 0:
+            round_start = time.perf_counter()
         print(f"[Client {client_id}] Round {round_num} 수신 대기 중...")
         try:
             recv_start = time.perf_counter()
@@ -98,6 +100,10 @@ def handle_client(conn, client_id):
                 
                 client_epochs[i] = epochs[i]
                 print(f"[Server] Client {i} → Epoch 설정: {client_epochs[i]} (Loss: {client_losses[i]:.4f})")
+            round_end = time.perf_counter()
+            round_duration = round_end - round_start
+            round_log.write(f"{round_num},{round_duration:.4f}\n")
+            round_log.flush()
 
         send_ready_barrier.wait()
         loss = client_losses[client_id]
