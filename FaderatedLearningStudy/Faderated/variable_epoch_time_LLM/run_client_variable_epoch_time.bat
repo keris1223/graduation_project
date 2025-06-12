@@ -1,4 +1,4 @@
 @echo off
-for /L %%i in (1,1,1) do (
+for /L %%i in (1,1,2) do (
     start cmd /k python client_variable_epoch_time_LLM.py
 )
