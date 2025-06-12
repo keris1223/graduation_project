@@ -92,7 +92,7 @@ def handle_client(conn, client_id):
             avg_end = time.perf_counter()
             print(f"[Server] 평균 계산 소요 시간: {avg_end - avg_start:.4f}s")
 
-            torch.save(averaged_model.state_dict(), f"models/round_{round_num:02d}.pt")
+#            torch.save(averaged_model.state_dict(), f"models/round_{round_num:02d}.pt")
             print(f"[Server] 평균 모델 저장 완료")
 
             # 다음 라운드 학습 에폭 계산
