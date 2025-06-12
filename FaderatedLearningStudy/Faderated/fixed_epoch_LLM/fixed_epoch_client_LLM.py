@@ -17,7 +17,7 @@ BATCH_SIZE = 4
 tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
 model = load_model().to("cuda" if torch.cuda.is_available() else "cpu")
 model.train()
-optimizer = optim.AdamW(model.parameters(), lr=5e-6)
+optimizer = optim.AdamW(model.parameters(), lr=1e-5)
 
 def load_prompts(path, tokenizer):
     with open(path, 'r', encoding='utf-8') as f:

@@ -18,7 +18,7 @@ import json
 HOST = '118.34.145.27'
 PORT = 5000
 NUM_CLIENTS = 2
-NUM_ROUNDS = 50
+NUM_ROUNDS = 100
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 
@@ -45,7 +45,7 @@ def average_models(models):
         avg_state[key] = sum(m[key] for m in models) / len(models)
     return avg_state
 
-def decide_epochs_from_comm_times(comm_times, min_epoch=1, max_epoch=5):
+def decide_epochs_from_comm_times(comm_times, min_epoch=3, max_epoch=7):
     """
     comm_times: 클라이언트별 통신 시간 리스트
     """

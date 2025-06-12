@@ -17,7 +17,8 @@ import random
 
 SERVER_IP = '118.34.145.27'
 PORT = 5000
-NUM_ROUNDS = 50
+NUM_ROUNDS = 100
+BATCH_SIZE = 4
 
 total_train_time = 0.0
 total_comm_time_to_server = 0.0
@@ -89,24 +90,28 @@ for round_num in range(1, NUM_ROUNDS + 1):
    
 
     for epoch in range(local_epochs):
+        epoch_loss = 0.0
         print(f"Epoch {epoch + 1}/{local_epochs}")
-        text = random.choice(prompts)  # ✅ 매 epoch마다 랜덤 선택
-        print(f"[Client] 선택된 prompt: {text[:80]}...")
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(device)
-        labels = inputs["input_ids"].clone()
-        print(f"[Client] 토큰 길이: {inputs['input_ids'].shape}")
-        try:
-            outputs = model(**inputs, labels=labels)
-            loss = outputs.loss
-            print(f"[Client] Loss 계산 완료: {loss.item():.4f}")
-            loss.backward()
-            print(f"[Client] backward 완료")
-            optimizer.step()
-            print(f"[Client] optimizer step 완료")
-            optimizer.zero_grad()
-            cumulative_loss += loss.item()
-        except Exception as e:
-            print(f"[Client] 학습 중 오류 발생: {e}")
+        for _ in range(BATCH_SIZE):
+
+            text = random.choice(prompts)  # ✅ 매 epoch마다 랜덤 선택
+
+            inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(device)
+            labels = inputs["input_ids"].clone()
+
+            try:
+                outputs = model(**inputs, labels=labels)
+                loss = outputs.loss
+                print(f"[Client] Loss 계산 완료: {loss.item():.4f}")
+                loss.backward()
+                epoch_loss+=loss.item()
+            except Exception as e:
+                print(f"[Client] 학습 중 오류 발생: {e}")
+        optimizer.step()
+
+        optimizer.zero_grad()
+        avg_epoch_loss = epoch_loss / BATCH_SIZE
+        cumulative_loss += avg_epoch_loss
         
     train_end = time.perf_counter()
     print(f"[Round {round_num}] 로컬 학습 시간: {train_end - train_start:.4f}s")

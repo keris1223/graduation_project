@@ -17,7 +17,7 @@ from peft import set_peft_model_state_dict, get_peft_model_state_dict
 HOST = '0.0.0.0'
 PORT = 5000
 NUM_CLIENTS = 2
-NUM_ROUNDS = 50
+NUM_ROUNDS = 100
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 
@@ -46,7 +46,7 @@ def average_models(models):
     return avg_state
 
 
-def decide_epochs_from_losses(losses, min_epoch=1, max_epoch=5):
+def decide_epochs_from_losses(losses, min_epoch=3, max_epoch=7):
     median = np.median(losses)
     std = np.std(losses) + 1e-6
 
