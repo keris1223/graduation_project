@@ -17,8 +17,8 @@ import json
 
 HOST = '118.34.145.27'
 PORT = 5000
-NUM_CLIENTS = 4
-NUM_ROUNDS = 50
+NUM_CLIENTS = 2
+NUM_ROUNDS = 100
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 
@@ -31,6 +31,7 @@ send_ready_barrier = threading.Barrier(NUM_CLIENTS)
 averaged_model = None
 comm_times = [0.0] * NUM_CLIENTS
 averaged_model = load_model()
+previous_epochs = [5] * NUM_CLIENTS
 
 client_log = open("client_log.csv", "w")
 client_log.write("round,client_id,loss,comm_time,epoch\n")
@@ -45,23 +46,24 @@ def average_models(models):
         avg_state[key] = sum(m[key] for m in models) / len(models)
     return avg_state
 
-def decide_epochs_from_comm_times(comm_times, min_epoch=3, max_epoch=7):
-    """
-    comm_times: 클라이언트별 통신 시간 리스트
-    """
+def decide_epochs_from_comm_times(comm_times, min_epoch=3, max_epoch=7, alpha=0.5):
     min_time = min(comm_times)
     max_time = max(comm_times)
-    
-    if max_time - min_time < 1e-6:
-        return [min_epoch] * len(comm_times)  # 통신 시간 거의 동일 시 고정
 
-    epochs = []
-    for t in comm_times:
+    if max_time - min_time < 1e-6:
+        return [previous_epochs[i] for i in range(len(comm_times))]
+
+    new_epochs = []
+    for i, t in enumerate(comm_times):
         ratio = (t - min_time) / (max_time - min_time)
-        norm = 1 - ratio  # 통신 빠를수록 epoch ↑
-        epoch = min_epoch + norm * (max_epoch - min_epoch)
-        epochs.append(int(round(epoch)))
-    return epochs
+        norm = 1 - ratio
+        raw_epoch = min_epoch + norm * (max_epoch - min_epoch)
+        smoothed_epoch = alpha * previous_epochs[i] + (1 - alpha) * raw_epoch
+        final_epoch = int(round(smoothed_epoch))
+        new_epochs.append(final_epoch)
+        previous_epochs[i] = smoothed_epoch  # 업데이트
+
+    return new_epochs
 
 def handle_client(conn, client_id):
     global averaged_model
