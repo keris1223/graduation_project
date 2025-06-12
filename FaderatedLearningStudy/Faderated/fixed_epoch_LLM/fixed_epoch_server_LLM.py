@@ -16,9 +16,9 @@ from peft import set_peft_model_state_dict, get_peft_model_state_dict
 
 HOST = '0.0.0.0'
 PORT = 5000
-NUM_CLIENTS = 2
-NUM_ROUNDS = 50
-FIXED_EPOCH = 3
+NUM_CLIENTS = 1
+NUM_ROUNDS = 100
+FIXED_EPOCH = 5
 
 final_ack_barrier = threading.Barrier(NUM_CLIENTS)
 

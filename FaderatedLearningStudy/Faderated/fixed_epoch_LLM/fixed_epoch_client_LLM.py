@@ -10,13 +10,14 @@ from peft import get_peft_model_state_dict
 
 SERVER_IP = '118.34.145.27'
 PORT = 5000
-NUM_ROUNDS = 50
+NUM_ROUNDS = 100
+BATCH_SIZE = 4
 # FIXED_EPOCH = 3
 
 tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
 model = load_model().to("cuda" if torch.cuda.is_available() else "cpu")
 model.train()
-optimizer = optim.AdamW(model.parameters(), lr=1e-5)
+optimizer = optim.AdamW(model.parameters(), lr=5e-6)
 
 def load_prompts(path, tokenizer):
     with open(path, 'r', encoding='utf-8') as f:
@@ -37,18 +38,22 @@ for round_num in range(1, NUM_ROUNDS + 1):
         local_epochs = payload.get('local_epochs',3)
         print(f"[Round {round_num}] 서버에서 모델 수신 완료")
     else:
-        local_epochs = 3
+        local_epochs = 5
     cumulative_loss = 0.0
     for epoch in range(local_epochs):
-        text = random.choice(prompts)
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(model.device)
-        labels = inputs["input_ids"].clone()
-        outputs = model(**inputs, labels=labels)
-        loss = outputs.loss
-        loss.backward()
+        epoch_loss = 0.0
+        for _ in range(BATCH_SIZE):
+            text = random.choice(prompts)
+            inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(model.device)
+            labels = inputs["input_ids"].clone()
+            outputs = model(**inputs, labels=labels)
+            loss = outputs.loss
+            loss.backward()
+            epoch_loss += loss.item()
         optimizer.step()
         optimizer.zero_grad()
-        cumulative_loss += loss.item()
+        avg_epoch_loss = epoch_loss / BATCH_SIZE
+        cumulative_loss += avg_epoch_loss
         print(f"Epoch {epoch+1}/{local_epochs} - Loss: {loss.item():.4f}")
 
     avg_loss = cumulative_loss / local_epochs
